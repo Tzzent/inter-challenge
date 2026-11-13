@@ -49,7 +49,7 @@ El PDF dice "rotación" en la arquitectura y "factorización QR" en la funcional
 
 ## 8. Todo en Docker
 
-- Go no está instalado en la máquina; Docker garantiza que lo que corre en local es lo mismo que corre en la nube (Cloud Run ejecuta contenedores).
+- Go no está instalado en la máquina; Docker garantiza que lo que corre en local es lo mismo que corre en la nube (Render ejecuta las mismas imágenes Docker).
 - Dockerfiles multi-etapa: la etapa `build` tiene el toolchain y corre los tests; la etapa `runtime` es mínima (distroless / alpine) y corre como usuario no root.
 - Los tests también corren en contenedores (`docker compose --profile test ...`), así cualquiera los reproduce con un solo comando.
 
