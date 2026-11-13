@@ -10,6 +10,12 @@ const token = jwt.sign({ sub: "tester" }, "test-secret", { algorithm: "HS256", e
 const auth = { Authorization: `Bearer ${token}` };
 const body = { matrices: [[[-0.6, -0.8], [-0.8, 0.6]], [[-5, -4], [0, 3]]] };
 
+test("GET / describes the service", async () => {
+  const res = await request(app).get("/").expect(200);
+  assert.equal(res.body.service, "node-api");
+  assert.ok(res.body.routes.includes("POST /api/v1/stats"));
+});
+
 test("GET /health is public", async () => {
   await request(app).get("/health").expect(200, { status: "ok" });
 });

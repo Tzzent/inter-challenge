@@ -7,6 +7,10 @@ export const app = express();
 
 app.use(express.json({ limit: "1mb" }));
 
+app.get("/", (_req, res) => {
+  res.json({ service: "node-api", routes: ["GET /health", "POST /api/v1/stats"] });
+});
+
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
