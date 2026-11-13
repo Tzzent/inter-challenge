@@ -1,0 +1,36 @@
+# Render Blueprint: deploys both APIs on the free plan (no credit card).
+# Free services cannot use Render's private network, so the Go API reaches
+# the Node API through its public URL (STATS_API_URL, set in the dashboard).
+envVarGroups:
+  - name: qr-stats-shared
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AUTH_USERNAME
+        sync: false
+      - key: AUTH_PASSWORD
+        sync: false
+
+services:
+  - type: web
+    name: qr-stats-node-api
+    runtime: docker
+    plan: free
+    dockerContext: ./node-api
+    dockerfilePath: ./node-api/Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: qr-stats-shared
+
+  - type: web
+    name: qr-stats-go-api
+    runtime: docker
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./go-api/Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: qr-stats-shared
+      # e.g. https://qr-stats-node-api.onrender.com (no trailing slash)
+      - key: STATS_API_URL
+        sync: false

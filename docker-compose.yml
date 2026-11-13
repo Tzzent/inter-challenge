@@ -1,0 +1,70 @@
+services:
+  node-api:
+    build:
+      context: ./node-api
+      target: runtime
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: "4000"
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  go-api:
+    build:
+      context: .
+      dockerfile: go-api/Dockerfile
+      target: runtime
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: "3000"
+      STATS_API_URL: http://node-api:4000
+    ports:
+      - "3000:3000"
+    depends_on:
+      node-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/server", "-healthcheck"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # --- test profile: docker compose --profile test run --rm --build <service> ---
+  go-api-test:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: go-api/Dockerfile
+      target: build
+    command: ["go", "test", "./..."]
+
+  node-api-test:
+    profiles: ["test"]
+    build:
+      context: ./node-api
+      target: build
+    command: ["npm", "test"]
+
+  integration-test:
+    profiles: ["test"]
+    image: node:26.13.0-alpine
+    volumes:
+      - ./scripts:/scripts:ro
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      GO_API_URL: http://go-api:3000
+    command: ["node", "/scripts/integration-test.mjs"]
+    depends_on:
+      go-api:
+        condition: service_healthy

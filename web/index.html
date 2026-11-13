@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR Stats</title>
+<style>
+  :root { --fg: #1d1d1f; --muted: #6e6e73; --bg: #fafafa; --card: #fff; --line: #e2e2e5; --accent: #0b63ce; --err: #b3261e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fg: #f2f2f2; --muted: #a1a1a6; --bg: #121214; --card: #1c1c1f; --line: #333338; --accent: #5aa2ff; --err: #ff8a80; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  h1 { font-size: 1.4rem; margin: 0 0 16px; }
+  h2 { font-size: 1rem; margin: 0 0 12px; }
+  label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+  input, textarea { width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
+  textarea { font-family: ui-monospace, monospace; min-height: 96px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; } .row > div { flex: 1 1 160px; }
+  button { margin-top: 12px; padding: 8px 16px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .msg { margin-top: 8px; font-size: .9rem; } .msg.err { color: var(--err); }
+  .tables { display: flex; gap: 16px; flex-wrap: wrap; overflow-x: auto; }
+  table { border-collapse: collapse; font-family: ui-monospace, monospace; font-size: .85rem; }
+  td, th { border: 1px solid var(--line); padding: 4px 8px; text-align: right; }
+  th { text-align: left; color: var(--muted); font-weight: 500; }
+</style>
+</head>
+<body>
+<main>
+  <h1>QR factorization + stats</h1>
+
+  <section>
+    <h2>1. Log in</h2>
+    <form id="login">
+      <div class="row">
+        <div><label for="user">Username</label><input id="user" autocomplete="username" required></div>
+        <div><label for="pass">Password</label><input id="pass" type="password" autocomplete="current-password" required></div>
+      </div>
+      <button type="submit">Get token</button>
+      <div id="login-msg" class="msg" role="status"></div>
+    </form>
+  </section>
+
+  <section>
+    <h2>2. Matrix (JSON)</h2>
+    <form id="qr">
+      <label for="matrix">Rectangular matrix, up to 100×100</label>
+      <textarea id="matrix">[[3, 0], [4, 5]]</textarea>
+      <button type="submit" id="qr-btn" disabled>Compute QR</button>
+      <div id="qr-msg" class="msg" role="status"></div>
+    </form>
+  </section>
+
+  <section id="result" hidden>
+    <h2>3. Result</h2>
+    <div class="tables">
+      <div><label>Q</label><div id="q"></div></div>
+      <div><label>R</label><div id="r"></div></div>
+      <div><label>Stats</label><div id="stats"></div></div>
+    </div>
+  </section>
+</main>
+<script>
+  // All output goes through textContent / createElement: no innerHTML with user or API data.
+  let token = null;
+  const $ = (id) => document.getElementById(id);
+  const say = (el, text, isErr) => { el.textContent = text; el.className = isErr ? "msg err" : "msg"; };
+  const fmt = (x) => (typeof x === "number" ? Number(x.toFixed(6)).toString() : String(x));
+
+  function table(rows) {
+    const t = document.createElement("table");
+    for (const row of rows) {
+      const tr = t.insertRow();
+      for (const cell of row) tr.insertCell().textContent = fmt(cell);
+    }
+    return t;
+  }
+
+  function statsTable(stats) {
+    const t = document.createElement("table");
+    for (const [k, v] of Object.entries(stats)) {
+      const tr = t.insertRow();
+      const th = document.createElement("th");
+      th.textContent = k;
+      tr.appendChild(th);
+      tr.insertCell().textContent = Array.isArray(v) ? v.join(", ") : fmt(v);
+    }
+    return t;
+  }
+
+  async function postJSON(path, body, auth) {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(auth && { Authorization: "Bearer " + auth }) },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "HTTP " + res.status);
+    return data;
+  }
+
+  $("login").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      ({ token } = await postJSON("/auth/token", { username: $("user").value, password: $("pass").value }));
+      say($("login-msg"), "Logged in. Token valid for 1 hour.");
+      $("qr-btn").disabled = false;
+    } catch (err) {
+      say($("login-msg"), err.message, true);
+    }
+  });
+
+  $("qr").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    let matrix;
+    try { matrix = JSON.parse($("matrix").value); } catch { return say($("qr-msg"), "Matrix is not valid JSON.", true); }
+    try {
+      const { q, r, stats } = await postJSON("/api/v1/qr", { matrix }, token);
+      $("q").replaceChildren(table(q));
+      $("r").replaceChildren(table(r));
+      $("stats").replaceChildren(statsTable(stats));
+      $("result").hidden = false;
+      say($("qr-msg"), "");
+    } catch (err) {
+      say($("qr-msg"), err.message, true);
+    }
+  });
+</script>
+</body>
+</html>
