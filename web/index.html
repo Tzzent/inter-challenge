@@ -64,7 +64,7 @@
   </section>
 </main>
 <script>
-  // All output goes through textContent / createElement: no innerHTML with user or API data.
+  // Toda la salida usa textContent / createElement: nunca innerHTML con datos del usuario o la API.
   let token = null;
   const $ = (id) => document.getElementById(id);
   const say = (el, text, isErr) => { el.textContent = text; el.className = isErr ? "msg err" : "msg"; };

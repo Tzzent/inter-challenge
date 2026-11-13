@@ -1,4 +1,4 @@
-// Package auth issues and verifies HS256 JWTs.
+// Package auth emite y verifica JWT HS256.
 package auth
 
 import (
@@ -11,7 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Issue returns an HS256 token for subject that expires after ttl.
+// Issue firma un token HS256 para subject que expira tras ttl.
 func Issue(secret []byte, subject string, ttl time.Duration) (string, error) {
 	now := time.Now()
 	claims := jwt.RegisteredClaims{
@@ -22,8 +22,8 @@ func Issue(secret []byte, subject string, ttl time.Duration) (string, error) {
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secret)
 }
 
-// CredentialsMatch compares credentials in constant time. Hashing first hides length differences.
-// Empty expected credentials never match, so an unconfigured server rejects every login.
+// CredentialsMatch compara en tiempo constante; el hash previo oculta diferencias de longitud.
+// Credenciales esperadas vacías nunca coinciden: un servidor sin configurar rechaza todo login.
 func CredentialsMatch(user, pass, wantUser, wantPass string) bool {
 	if wantUser == "" || wantPass == "" {
 		return false
@@ -33,8 +33,8 @@ func CredentialsMatch(user, pass, wantUser, wantPass string) bool {
 	return subtle.ConstantTimeCompare(u1[:], u2[:])&subtle.ConstantTimeCompare(p1[:], p2[:]) == 1
 }
 
-// Middleware rejects requests without a valid "Bearer <jwt>" signed with secret.
-// Only HS256 is accepted, so alg=none and algorithm-confusion tokens fail. An expiry is required.
+// Middleware rechaza peticiones sin un "Bearer <jwt>" válido firmado con secret.
+// Solo acepta HS256 (bloquea alg=none y confusión de algoritmo) y exige expiración.
 func Middleware(secret []byte) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		token, ok := strings.CutPrefix(c.Get(fiber.HeaderAuthorization), "Bearer ")

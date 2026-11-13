@@ -9,18 +9,18 @@ export interface Stats {
   diagonal: boolean[];
 }
 
-/** Values with |x| <= EPSILON count as zero (floating-point QR leaves ~1e-16 residues). */
+/** Valores con |x| <= EPSILON cuentan como cero (la QR en coma flotante deja residuos de ~1e-16). */
 export const EPSILON = 1e-9;
 
 /**
- * Reports whether every element off the main diagonal (i !== j) is ~0.
- * Non-square matrices are accepted ("rectangular diagonal"): [[1,0,0],[0,2,0]] is diagonal.
+ * Indica si todo elemento fuera de la diagonal principal (i !== j) es ~0.
+ * Acepta matrices no cuadradas ("diagonal rectangular"): [[1,0,0],[0,2,0]] es diagonal.
  */
 export function isDiagonal(m: Matrix, eps = EPSILON): boolean {
   return m.every((row, i) => row.every((x, j) => i === j || Math.abs(x) <= eps));
 }
 
-/** Returns an error message for invalid input, or null when it is a non-empty list of rectangular finite matrices. */
+/** Devuelve un mensaje de error, o null si es una lista no vacía de matrices rectangulares y finitas. */
 export function validateMatrices(input: unknown): string | null {
   if (!Array.isArray(input)) return "matrices must be an array of matrices";
   if (input.length === 0) return "matrices must not be empty";
@@ -36,7 +36,7 @@ export function validateMatrices(input: unknown): string | null {
   return null;
 }
 
-/** Computes max, min, sum, average and the diagonal flags over every value of every matrix in a single pass. */
+/** Calcula max, min, sum, average y las banderas de diagonal sobre todos los valores en una sola pasada. */
 export function computeStats(matrices: Matrix[]): Stats {
   let max = -Infinity;
   let min = Infinity;

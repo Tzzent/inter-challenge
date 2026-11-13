@@ -1,4 +1,4 @@
-// Package handler wires the HTTP routes of the Go API.
+// Package handler define las rutas HTTP de la API Go.
 package handler
 
 import (
@@ -17,22 +17,22 @@ import (
 	"go-api/internal/statsclient"
 )
 
-// MaxDim is the maximum number of rows and of columns accepted by POST /api/v1/qr.
+// MaxDim es el máximo de filas y de columnas que acepta POST /api/v1/qr.
 const MaxDim = 100
 
-// Config holds the dependencies of the HTTP app.
+// Config agrupa las dependencias de la app HTTP.
 type Config struct {
 	Stats     *statsclient.Client
 	JWTSecret []byte
 	Username  string
 	Password  string
-	WebDir    string // optional; served as static files when set
+	WebDir    string // opcional; si se define, se sirve como estático
 }
 
-// NewApp builds the Fiber app with all routes.
+// NewApp construye la app Fiber con todas las rutas.
 func NewApp(cfg Config) *fiber.App {
 	app := fiber.New(fiber.Config{
-		BodyLimit: 1 << 20, // 1 MiB: a 100x100 matrix fits comfortably
+		BodyLimit: 1 << 20, // 1 MiB: una matriz 100x100 cabe con holgura
 		ErrorHandler: func(c fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			msg := "internal error"
@@ -101,7 +101,7 @@ func badRequest(c fiber.Ctx, msg string) error {
 	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": msg})
 }
 
-// validate returns an error message, or "" for a non-empty rectangular finite matrix within MaxDim.
+// validate devuelve un mensaje de error, o "" si la matriz es no vacía, rectangular, finita y cabe en MaxDim.
 func validate(m [][]float64) string {
 	if len(m) == 0 || len(m[0]) == 0 {
 		return "matrix must be a non-empty array of non-empty rows"

@@ -1,4 +1,4 @@
-// Package statsclient calls the Node stats API.
+// Package statsclient llama a la API de estadísticas en Node.
 package statsclient
 
 import (
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Stats mirrors the Node API response of POST /api/v1/stats.
+// Stats refleja la respuesta de POST /api/v1/stats.
 type Stats struct {
 	Max         float64 `json:"max"`
 	Min         float64 `json:"min"`
@@ -21,19 +21,19 @@ type Stats struct {
 	Diagonal    []bool  `json:"diagonal"`
 }
 
-// Client talks to the Node stats API at baseURL with a 5 s timeout.
+// Client habla con la API Node en baseURL con timeout de 5 s.
 type Client struct {
 	baseURL string
 	http    *http.Client
 }
 
-// New returns a Client for baseURL (e.g. http://node-api:4000).
+// New crea un Client para baseURL (p. ej. http://node-api:4000).
 func New(baseURL string) *Client {
 	return &Client{baseURL: strings.TrimRight(baseURL, "/"), http: &http.Client{Timeout: 5 * time.Second}}
 }
 
-// Compute posts the matrices to /api/v1/stats, forwarding the caller's Authorization header.
-// Any transport error or non-200 status is returned as an error.
+// Compute envía las matrices a /api/v1/stats reenviando el header Authorization del cliente.
+// Cualquier error de transporte o status distinto de 200 se devuelve como error.
 func (c *Client) Compute(ctx context.Context, authorization string, matrices ...[][]float64) (*Stats, error) {
 	body, err := json.Marshal(map[string]any{"matrices": matrices})
 	if err != nil {
@@ -62,7 +62,7 @@ func (c *Client) Compute(ctx context.Context, authorization string, matrices ...
 	return &s, nil
 }
 
-// Ping returns nil when the stats API answers GET /health with 200.
+// Ping devuelve nil si la API responde 200 a GET /health.
 func (c *Client) Ping(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/health", nil)
 	if err != nil {

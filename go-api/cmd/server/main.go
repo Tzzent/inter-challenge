@@ -1,4 +1,4 @@
-// Command server runs the Go QR API.
+// Command server ejecuta la API QR en Go.
 package main
 
 import (

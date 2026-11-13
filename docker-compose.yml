@@ -38,7 +38,7 @@ services:
       timeout: 3s
       retries: 10
 
-  # --- test profile: docker compose --profile test run --rm --build <service> ---
+  # --- perfil test: docker compose --profile test run --rm --build <servicio> ---
   go-api-test:
     profiles: ["test"]
     build:

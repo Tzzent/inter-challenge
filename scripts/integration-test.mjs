@@ -1,4 +1,4 @@
-// End-to-end check against the running compose stack (Go -> Node). Exits non-zero on failure.
+// Prueba end-to-end contra el stack en ejecución (Go -> Node). Sale con código != 0 si falla.
 import assert from "node:assert/strict";
 
 const base = process.env.GO_API_URL ?? "http://localhost:3000";
