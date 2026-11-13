@@ -1,6 +1,6 @@
-# Render Blueprint: deploys both APIs on the free plan (no credit card).
-# Free services cannot use Render's private network, so the Go API reaches
-# the Node API through its public URL (STATS_API_URL, set in the dashboard).
+# Blueprint de Render: ambas APIs en el plan gratuito (sin tarjeta).
+# El plan gratuito no tiene red privada: Go llama a Node por su URL pública
+# (STATS_API_URL, definida en el dashboard).
 envVarGroups:
   - name: qr-stats-shared
     envVars:
@@ -31,6 +31,6 @@ services:
     healthCheckPath: /health
     envVars:
       - fromGroup: qr-stats-shared
-      # e.g. https://qr-stats-node-api.onrender.com (no trailing slash)
+      # p. ej. https://qr-stats-node-api.onrender.com (sin barra final)
       - key: STATS_API_URL
         sync: false

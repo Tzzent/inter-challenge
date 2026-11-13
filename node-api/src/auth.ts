@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
-/** Rejects requests without a valid HS256 bearer token signed with JWT_SECRET. Other algorithms (incl. "none") are refused. */
+/** Rechaza peticiones sin un bearer token HS256 válido firmado con JWT_SECRET. Rechaza otros algoritmos (incluido "none"). */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const secret = process.env.JWT_SECRET;
   if (!secret) {

@@ -26,7 +26,7 @@ The PDF in `assets/` defines the challenge. Plan: `~/.claude/plans/memoized-orbi
 - [x] T4 Integration Go→Node: `statsclient` with timeout, stats included in the QR response, 502 when Node fails, compose integration test
 - [x] T5 JWT: `POST /auth/token`, middleware in both APIs, 401 tests
 - [x] T6 Frontend: `web/index.html` served by Fiber
-- [ ] T7 Render deploy via `render.yaml` Blueprint (free plan). Cloud Run dropped: GCP billing signup failed with OR_BACR2_59. Pending: push to GitHub, then create the Blueprint on Render.
+- [x] T7 Render deploy via `render.yaml` Blueprint (free plan). Cloud Run dropped: GCP billing signup failed with OR_BACR2_59. Live at https://qr-stats-go-api.onrender.com; `scripts/integration-test.mjs` passed against it on 2026-11-13.
 - [x] T8 README
 
 ## Route
@@ -55,4 +55,4 @@ The PDF in `assets/` defines the challenge. Plan: `~/.claude/plans/memoized-orbi
 Go image `golang:1.27.4-alpine` / runtime `gcr.io/distroless/static-debian13:nonroot`; Fiber v3.7.0; golang-jwt v5.3.1; gonum v0.17.0 (tests only); `node:26.13.0-alpine`; express 5.3.0; typescript 7.0.2 (works, no fallback needed); jsonwebtoken 9.0.3; supertest 7.3.2; tsx 4.23.15.
 
 ## Next step
-User review, then work-unit commits on `feat/qr-stats-pipeline`. T7 (Render) needs the repo on GitHub.
+All tasks done. Deployed from `main` (PR #1 merged).

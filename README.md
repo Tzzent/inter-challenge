@@ -1,48 +1,61 @@
 # QR → Stats pipeline
 
-Coding challenge solution: two REST APIs that work in a chain.
+Dos APIs REST que trabajan en cadena:
 
-- **go-api** (Go + Fiber v3): receives a rectangular matrix, computes its full **QR factorization** with hand-written Householder reflections, sends Q and R to the Node API, and returns Q, R and the stats.
-- **node-api** (Node + Express 5, TypeScript): computes max, min, average, sum, and whether any matrix is diagonal, over all values of all matrices in a single pass.
+- **go-api** (Go + Fiber v3): recibe una matriz rectangular, calcula su **factorización QR** completa con reflexiones de Householder escritas a mano, envía Q y R a la API Node y devuelve Q, R y las estadísticas.
+- **node-api** (Node + Express 5, TypeScript): calcula máximo, mínimo, promedio, suma y si alguna matriz es diagonal, en una sola pasada.
 
-Both are protected with JWT (HS256), containerized, and tested inside Docker. A minimal frontend is served by the Go API at `/`.
-
-## Architecture
+Ambas usan JWT (HS256), corren en Docker y se prueban dentro de contenedores. La API Go sirve un frontend mínimo en `/`.
 
 ```
-Client ──POST /api/v1/qr {matrix}──▶ go-api :3000 ──POST /api/v1/stats {matrices:[Q,R]}──▶ node-api :4000
-   ▲                                    │  (forwards Authorization)                         │
-   └──────────── {q, r, stats} ◀────────┴──────────────── {max,min,average,sum,...} ◀────────┘
+Cliente ──POST /api/v1/qr──▶ go-api :3000 ──POST /api/v1/stats (reenvía Authorization)──▶ node-api :4000
 ```
 
-```
-go-api/
-  cmd/server/main.go        env wiring, -healthcheck flag
-  internal/qr               Householder QR (pure, no HTTP); gonum used only in tests as an oracle
-  internal/handler          routes, input validation, error mapping
-  internal/statsclient      HTTP client for node-api (5 s timeout)
-  internal/auth             JWT issue/verify, constant-time credential check
-node-api/
-  src/stats.ts              computeStats, isDiagonal, validateMatrices (pure)
-  src/app.ts / server.ts    Express app (no listen) / entrypoint
-  src/auth.ts               JWT middleware
-web/index.html              login → matrix → Q, R, stats tables
-scripts/integration-test.mjs  end-to-end test against the running stack
-```
+## En vivo (Render)
 
-## Quick start
+- Web + API QR (Go): https://qr-stats-go-api.onrender.com
+- API de estadísticas (Node): https://qr-stats-node-api.onrender.com
 
-Requires Docker with Compose v2+. Nothing else is needed on the host.
+## Ejecutar en local
+
+Solo requiere Docker con Compose v2+.
 
 ```sh
-cp .env.example .env    # edit JWT_SECRET and the demo credentials
+cp .env.example .env    # edita JWT_SECRET y las credenciales demo
 docker compose up --build
 ```
 
-- Frontend: http://localhost:3000
-- Go API: http://localhost:3000, Node API: http://localhost:4000
+Frontend y API Go en http://localhost:3000; API Node en http://localhost:4000.
 
-## curl examples
+## Tests
+
+```sh
+docker compose --profile test run --rm --build go-api-test     # go test ./...
+docker compose --profile test run --rm --build node-api-test   # node:test + supertest
+
+# end-to-end contra el stack en ejecución
+docker compose up -d --build --wait go-api node-api
+docker compose --profile test run --rm --build integration-test
+docker compose down
+```
+
+## API
+
+Los errores siempre son JSON: `{"error": "..."}`.
+
+| API | Método | Ruta | Auth | Descripción |
+|---|---|---|---|---|
+| go | GET | `/health` | pública | `{"status":"ok","statsApi":"ok"\|"down"}` |
+| go | POST | `/auth/token` | pública | `{"username","password"}` → `{"token"}` (HS256, 1 h); 401 si falla |
+| go | POST | `/api/v1/qr` | Bearer | `{"matrix": number[][]}` → `{"q","r","stats"}` |
+| node | GET | `/health` | pública | `{"status":"ok"}` |
+| node | POST | `/api/v1/stats` | Bearer | `{"matrices": number[][][]}` → `{"max","min","average","sum","anyDiagonal","diagonal"}` |
+
+`/api/v1/qr` responde **400** ante JSON inválido, matriz o filas vacías, filas de distinto largo, valores no finitos o más de 100 filas/columnas; **401** sin token válido; **502** si node-api falla, tarda más de 5 s o rechaza la petición. Q es m×m ortogonal y R es m×n triangular superior; los signos pueden diferir de un cálculo a mano porque `(-Q)(-R) = QR`.
+
+### Autenticación y ejemplo
+
+Se pide un token a `/auth/token` y se envía como `Authorization: Bearer <token>`. Go reenvía ese mismo header a Node, que lo valida con el `JWT_SECRET` compartido.
 
 ```sh
 TOKEN=$(curl -s -X POST localhost:3000/auth/token \
@@ -56,62 +69,32 @@ curl -s -X POST localhost:3000/api/v1/qr \
 #  "stats":{"max":3,"min":-5,"average":-0.95,"sum":-7.6,"anyDiagonal":false,"diagonal":[false,false]}}
 ```
 
-(Values shown rounded; floating-point output may carry ~1e-16 noise.)
+### Variables de entorno
 
-## Tests
+| Variable | Usada por | Descripción |
+|---|---|---|
+| `JWT_SECRET` | ambas | secreto HS256 compartido (obligatorio) |
+| `AUTH_USERNAME`, `AUTH_PASSWORD` | go-api | credenciales demo de `/auth/token` |
+| `STATS_API_URL` | go-api | URL base de node-api (compose usa `http://node-api:4000`) |
+| `PORT` | ambas | 3000 / 4000 |
 
-All tests run in containers:
+## Despliegue (Render)
+
+Definido en [`render.yaml`](render.yaml) (Blueprint de Render, plan gratuito):
+
+- Los servicios gratuitos se duermen tras ~15 min sin tráfico; la primera petición puede tardar 30 a 50 s.
+- El plan gratuito no tiene red privada, así que Go llama a Node por su URL pública (`STATS_API_URL`).
+- `JWT_SECRET` lo genera Render y se comparte en el grupo `qr-stats-shared`, junto con `AUTH_USERNAME` y `AUTH_PASSWORD`.
+- Se eligió Render en lugar de Google Cloud Run porque el alta de facturación en GCP falló (`OR_BACR2_59`) y Render no pide tarjeta. Ambos usan las mismas imágenes Docker.
+
+Smoke test contra el despliegue:
 
 ```sh
-docker compose --profile test run --rm --build go-api-test     # go test ./...
-docker compose --profile test run --rm --build node-api-test   # node:test + supertest
-
-# end-to-end, against the running stack
-docker compose up -d --build --wait go-api node-api
-docker compose --profile test run --rm --build integration-test
-docker compose down
+set -a; . ./.env; set +a
+GO_API_URL=https://qr-stats-go-api.onrender.com node scripts/integration-test.mjs
 ```
 
-## API reference
+## Documentación
 
-Errors are always JSON: `{"error": "..."}`.
-
-### go-api (port 3000)
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/health` | public | `{"status":"ok","statsApi":"ok"\|"down"}`, always 200 while Go is up |
-| POST | `/auth/token` | public | body `{"username","password"}` → `{"token"}` (HS256, 1 h). 401 on bad credentials |
-| POST | `/api/v1/qr` | Bearer | body `{"matrix": number[][]}` → `{"q","r","stats"}` |
-| GET | `/` | public | frontend |
-
-`/api/v1/qr` returns **400** for malformed JSON, empty matrix or rows, ragged rows, non-numeric/non-finite values, or more than 100 rows/columns (body limit 1 MiB); **401** without a valid token; **502** if node-api fails, times out (5 s) or rejects the request.
-
-Q is m×m orthogonal and R is m×n upper triangular (full QR) for any shape. Householder signs may differ from a hand computation: `(-Q)(-R) = QR`.
-
-### node-api (port 4000)
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/health` | public | `{"status":"ok"}` |
-| POST | `/api/v1/stats` | Bearer | body `{"matrices": number[][][]}` → `{"max","min","average","sum","anyDiagonal","diagonal": boolean[]}` |
-
-Returns **400** for empty `matrices`, an empty matrix, ragged rows or non-finite values. A matrix is diagonal when every element with i ≠ j satisfies |x| ≤ 1e-9; non-square ("rectangular diagonal") matrices are allowed.
-
-### Environment
-
-| Variable | Used by | Description |
-|---|---|---|
-| `JWT_SECRET` | both | shared HS256 secret (required) |
-| `AUTH_USERNAME`, `AUTH_PASSWORD` | go-api | demo credentials for `/auth/token` |
-| `STATS_API_URL` | go-api | node-api base URL (compose sets `http://node-api:4000`) |
-| `PORT` | both | 3000 / 4000 |
-
-## Docs (Spanish)
-
-- [docs/01-problem.md](docs/01-problem.md): the problem explained without jargon, with a worked example.
-- [docs/02-decisions.md](docs/02-decisions.md): design decisions and their rationale.
-
-## Cloud Run deployment (pending)
-
-Planned: push both images to Artifact Registry and deploy two Cloud Run services. `STATS_API_URL` will point at the node-api service URL and `JWT_SECRET` will come from Secret Manager. Steps and URLs will be added here once deployed.
+- [docs/01-problem.md](docs/01-problem.md): el problema explicado sin jerga, con un ejemplo resuelto.
+- [docs/02-decisions.md](docs/02-decisions.md): decisiones de diseño y su justificación.

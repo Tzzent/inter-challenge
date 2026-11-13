@@ -18,7 +18,7 @@ import (
 
 var secret = []byte("test-secret")
 
-// fakeNode stands in for the Node stats API and records the forwarded Authorization header.
+// fakeNode sustituye a la API Node y registra el header Authorization reenviado.
 func fakeNode(t *testing.T, status int) (*httptest.Server, *string) {
 	var gotAuth string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

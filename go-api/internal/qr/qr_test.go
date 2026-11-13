@@ -103,7 +103,7 @@ func TestDecomposeDoesNotMutateInput(t *testing.T) {
 	assertClose(t, "A", a, [][]float64{{3, 0}, {4, 5}})
 }
 
-// normalize flips signs so that R has a non-negative diagonal; (-Q_i)(-R_i) leaves QR unchanged.
+// normalize invierte signos para que R tenga diagonal no negativa; (-Q_i)(-R_i) no altera QR.
 func normalize(q, r [][]float64) {
 	for i := 0; i < len(r) && i < len(r[0]); i++ {
 		if r[i][i] < 0 {
@@ -117,13 +117,13 @@ func normalize(q, r [][]float64) {
 	}
 }
 
-// TestDecomposeMatchesGonum uses gonum only as an oracle. gonum's QR requires m >= n, and the
-// trailing m-n columns of a full Q are not unique, so only R and the first n columns of Q are compared.
+// TestDecomposeMatchesGonum usa gonum solo como oráculo. gonum exige m >= n y las últimas m-n
+// columnas de una Q completa no son únicas, así que solo se comparan R y las primeras n columnas de Q.
 func TestDecomposeMatchesGonum(t *testing.T) {
 	for name, a := range shapes {
 		m, n := len(a), len(a[0])
 		if m < n || name == "rank deficient 3x3" || name == "zero column 3x2" {
-			continue // oracle undefined (m<n) or not unique (rank deficient)
+			continue // oráculo indefinido (m<n) o no único (rango deficiente)
 		}
 		t.Run(name, func(t *testing.T) {
 			dense := mat.NewDense(m, n, nil)

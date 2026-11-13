@@ -2,10 +2,14 @@ import express, { type NextFunction, type Request, type Response } from "express
 import { requireAuth } from "./auth.js";
 import { computeStats, validateMatrices, type Matrix } from "./stats.js";
 
-/** Express app without listen(), so tests can import it. */
+/** App Express sin listen(), para que los tests puedan importarla. */
 export const app = express();
 
 app.use(express.json({ limit: "1mb" }));
+
+app.get("/", (_req, res) => {
+  res.json({ service: "node-api", routes: ["GET /health", "POST /api/v1/stats"] });
+});
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
@@ -23,7 +27,7 @@ app.post("/api/v1/stats", (req, res) => {
   res.json(computeStats(matrices as Matrix[]));
 });
 
-// Body-parser errors (malformed JSON, too large) carry a status; anything else is a 500.
+// Los errores del body-parser (JSON inválido, demasiado grande) traen status; el resto es 500.
 app.use((err: { status?: number; message?: string }, _req: Request, res: Response, _next: NextFunction) => {
   const status = err.status && err.status >= 400 && err.status < 500 ? err.status : 500;
   res.status(status).json({ error: status === 500 ? "internal error" : (err.message ?? "bad request") });

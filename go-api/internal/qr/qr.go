@@ -1,11 +1,11 @@
-// Package qr computes the QR factorization of a dense matrix with Householder reflections.
+// Package qr calcula la factorización QR de una matriz densa con reflexiones de Householder.
 package qr
 
 import "math"
 
-// Decompose returns the full QR factorization A = Q·R of an m×n matrix (rows of equal length).
-// Q is m×m orthogonal and R is m×n upper triangular, for any shape (m>n, m<n, m=n).
-// Entries below R's diagonal are exactly 0. A is not modified.
+// Decompose devuelve la factorización QR completa A = Q·R de una matriz m×n.
+// Q es m×m ortogonal y R es m×n triangular superior, para cualquier forma (m>n, m<n, m=n).
+// Bajo la diagonal de R todo es exactamente 0. No modifica A.
 func Decompose(a [][]float64) (q, r [][]float64) {
 	m, n := len(a), len(a[0])
 	r = make([][]float64, m)
@@ -18,14 +18,14 @@ func Decompose(a [][]float64) (q, r [][]float64) {
 
 	v := make([]float64, m)
 	for k := 0; k < min(m-1, n); k++ {
-		// Reflect x = R[k:, k] onto alpha·e1. alpha takes the sign opposite to x[0]
-		// so v = x - alpha·e1 never suffers cancellation.
+		// Refleja x = R[k:, k] sobre alpha·e1. alpha toma el signo opuesto a x[0]
+		// para que v = x - alpha·e1 no sufra cancelación.
 		var norm float64
 		for i := k; i < m; i++ {
 			norm = math.Hypot(norm, r[i][k])
 		}
 		if norm == 0 {
-			continue // column already zero below the diagonal
+			continue // columna ya nula bajo la diagonal
 		}
 		alpha := -norm
 		if r[k][k] < 0 {
@@ -40,7 +40,7 @@ func Decompose(a [][]float64) (q, r [][]float64) {
 			vv += v[i] * v[i]
 		}
 
-		// R ← H·R with H = I - 2·v·vᵀ/(vᵀv), touching rows k.. and columns k..
+		// R ← H·R con H = I - 2·v·vᵀ/(vᵀv), solo filas k.. y columnas k..
 		for j := k; j < n; j++ {
 			var s float64
 			for i := k; i < m; i++ {
@@ -51,7 +51,7 @@ func Decompose(a [][]float64) (q, r [][]float64) {
 				r[i][j] -= f * v[i]
 			}
 		}
-		// Q ← Q·H, touching columns k..
+		// Q ← Q·H, solo columnas k..
 		for i := 0; i < m; i++ {
 			var s float64
 			for l := k; l < m; l++ {
